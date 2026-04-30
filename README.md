@@ -19,8 +19,8 @@ Twimood は、X（旧 Twitter）の投稿を取り込み、OpenAI API で感情�
 
 - `/calendar/`  
   日ごとの感情・行動ラベルを確認するカレンダー画面
-  <img width="1920" height="912" alt="カレンダー画面（簡略表示）" src="https://github.com/user-attachments/assets/4b274ac5-b784-4f4f-b1b0-ab1fa660d719" />
   <img width="1920" height="912" alt="カレンダー画面（詳細表示）" src="https://github.com/user-attachments/assets/31659999-eb82-494f-8f8f-32c4d09b097e" />
+  <img width="1920" height="912" alt="カレンダー画面（簡略表示）" src="https://github.com/user-attachments/assets/4b274ac5-b784-4f4f-b1b0-ab1fa660d719" />
 
 - `/graph/`  
   ラベルカテゴリの推移を見るグラフ画面
