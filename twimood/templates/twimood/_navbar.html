@@ -1,0 +1,44 @@
+<nav class="navbar fixed-bottom navbar-light bg-light border-top">
+  <div class="container-fluid d-flex justify-content-around">
+    <a class="nav-link {% if request.path == '/' %}active fw-bold{% endif %}" href="{% url 'setup' %}">取得</a>
+    <a class="nav-link {% if request.path == '/calendar/' %}active fw-bold{% endif %}" href="{% url 'calendar' %}">カレンダー</a>
+    <a class="nav-link {% if request.path == '/graph/' %}active fw-bold{% endif %}" href="{% url 'graph' %}">グラフ</a>
+  </div>
+</nav>
+
+<style>
+.navbar {
+  background-color: #1DA1F2 !important;
+  border-top: 1px solid #1DA1F2 !important;
+}
+
+.nav-link {
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  font-size: 1.3rem;
+  padding: 0.35em;
+  width: 33.333%;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  color: azure;
+}
+
+@media (max-width: 991px) {
+  html {
+    font-size: 28px;
+  }
+}
+
+@media screen and (orientation: landscape) and (max-width: 991px) {
+  html {
+    font-size: 16px;
+  }
+
+  .navbar {
+    display: none;
+  }
+}
+</style>
