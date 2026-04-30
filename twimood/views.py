@@ -385,27 +385,20 @@ def graph_data(request):
     year = int(request.GET.get("year", datetime.now().year))
     month = int(request.GET.get("month", datetime.now().month))
     day = int(request.GET.get("day", datetime.now().day))
-    try:
-        week_start = int(request.GET.get("week_start", 0))
-    except ValueError:
-        week_start = 0
-    if week_start not in {0, 5, 6}:
-        week_start = 0
 
     base_date = datetime(year, month, day)
 
     if unit == "year":
-        start = datetime(year, 1, 1)
-        end = datetime(year + 1, 1, 1)
+        end = datetime(year, month, 1) + relativedelta(months=1)
+        start = end - relativedelta(months=12)
         step = "month"
     elif unit == "week":
-        python_week_start = (week_start - 1) % 7
-        start = base_date - timedelta(days=(base_date.weekday() - python_week_start) % 7)
-        end = start + timedelta(days=7)
+        start = base_date - timedelta(days=6)
+        end = base_date + timedelta(days=1)
         step = "day"
     else:
-        start = datetime(year, month, 1)
-        end = start + relativedelta(months=1)
+        end = base_date + timedelta(days=1)
+        start = end - relativedelta(months=1)
         step = "day"
 
     tweets = Tweet.objects.filter(date__gte=start, date__lt=end)
