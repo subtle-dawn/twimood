@@ -1,0 +1,16 @@
+{
+  "name": "Twimood",
+  "short_name": "Twimood",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#29a9e8",
+  "theme_color": "#29a9e8",
+  "icons": [
+    {
+      "src": "/static/twimood/icons/pwa-icon.png",
+      "sizes": "1500x1500",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

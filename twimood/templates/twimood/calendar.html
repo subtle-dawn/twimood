@@ -1,9 +1,14 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Twimood カレンダー</title>
+  <title>Twimood</title>
+  <link rel="icon" type="image/png" href="{% static 'twimood/icons/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'twimood/icons/pwa-icon.png' %}">
+  <link rel="manifest" href="{% static 'twimood/manifest.webmanifest' %}">
+  <meta name="theme-color" content="#29a9e8">
 
   <!-- FullCalendarのCSSとJS（CDNから確実に読み込む） -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
