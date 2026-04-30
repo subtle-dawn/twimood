@@ -90,7 +90,7 @@
   /* カレンダーのボタン */
   .fc .fc-toolbar-chunk {
     display: grid;
-    grid-template-columns: auto minmax(8rem, 1.15fr) minmax(6.5rem, 0.85fr) auto;
+    grid-template-columns: auto minmax(8rem, 1.15fr) minmax(8.5rem, 0.9fr) auto;
     align-items: center;
     gap: 0.45rem;
     width: 100%;
@@ -105,6 +105,16 @@
     gap: 0.25rem;
   }
 
+  .fc .fc-toolbar-chunk .fc-button-group:has(.fc-detailedMode-button) {
+    display: inline-flex;
+    gap: 0;
+    min-height: 2.55rem;
+    padding: 0.18rem;
+    border: 1px solid var(--control-border);
+    border-radius: 999px;
+    background: #f6faff;
+  }
+
   .fc .fc-button{
     min-height: 2.55rem;
     border-radius: 0.5rem !important;
@@ -112,6 +122,10 @@
     font-weight: 700 !important;
     line-height: 1 !important;
     box-shadow: none !important;
+  }
+
+  .fc-direction-ltr .fc-toolbar > * > :not(:first-child) {
+    margin: 0;
   }
 
   .fc .fc-prev-button svg,
@@ -146,17 +160,37 @@
 
   .fc-button-primary:not(:disabled).fc-button-active,
   .fc-button-primary:not(:disabled):active,
-  .fc .fc-modeToggle-button {
+  .fc .fc-detailedMode-button.is-selected,
+  .fc .fc-simpleMode-button.is-selected {
     background-color: var(--twimood-blue) !important;
     border-color: var(--twimood-blue) !important;
     color: #fff !important;
   }
 
-  .fc .fc-modeToggle-button:hover,
-  .fc .fc-modeToggle-button:focus {
+  .fc .fc-detailedMode-button.is-selected:hover,
+  .fc .fc-detailedMode-button.is-selected:focus,
+  .fc .fc-simpleMode-button.is-selected:hover,
+  .fc .fc-simpleMode-button.is-selected:focus {
     background-color: var(--twimood-blue-dark) !important;
     border-color: var(--twimood-blue-dark) !important;
     color: #fff !important;
+  }
+
+  .fc .fc-detailedMode-button,
+  .fc .fc-simpleMode-button {
+    min-width: 4.2rem;
+    border-color: transparent !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    padding-inline: 0.85rem !important;
+  }
+
+  .fc .fc-detailedMode-button:hover,
+  .fc .fc-detailedMode-button:focus,
+  .fc .fc-simpleMode-button:hover,
+  .fc .fc-simpleMode-button:focus {
+    background: #eaf6ff !important;
+    border-color: transparent !important;
   }
 
   .fc .fc-prev-button,
@@ -165,10 +199,24 @@
     padding-inline: 0 !important;
   }
 
+  .calendar-date-input {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .fc-theme-standard td,
   .fc-theme-standard th,
   .fc-theme-standard .fc-scrollgrid {
     border-color: #e7eef5;
+  }
+
+  .fc .fc-col-header-cell {
+    background: #f6faff;
   }
 
   /* カレンダー内の日付数字 */
@@ -187,7 +235,7 @@
   /* 曜日（Sun / Mon ...） */
   .fc .fc-col-header-cell-cushion {
     font-size: 1rem;
-    color: inherit;
+    color: #28465c;
     text-decoration: none;
     cursor: default;
   }
@@ -219,25 +267,35 @@
     }
 
     .fc .fc-header-toolbar .fc-toolbar-chunk:first-child {
-      grid-template-columns: auto minmax(7rem, 1.15fr) minmax(4.8rem, 0.85fr) auto;
-      gap: 0.35rem;
+      grid-template-columns: auto minmax(5.1rem, 0.72fr) minmax(8.65rem, 1.18fr) auto;
+      gap: 0.25rem;
     }
 
     .fc .fc-toolbar-title{
       min-height: 2.55rem;
-      padding: 0.375rem 0.55rem;
-      font-size: 1rem !important;
+      padding: 0.375rem 0.35rem;
+      font-size: 0.9rem !important;
     }
 
     .fc .fc-button {
       min-height: 2.55rem;
-      font-size: 0.9rem !important;
-      padding: 0.375rem 0.55rem !important;
+      font-size: 0.8rem !important;
+      padding: 0.375rem 0.35rem !important;
+    }
+
+    .fc .fc-toolbar-chunk .fc-button-group:has(.fc-detailedMode-button) {
+      padding: 0.14rem;
+    }
+
+    .fc .fc-detailedMode-button,
+    .fc .fc-simpleMode-button {
+      min-width: 4.1rem;
+      padding-inline: 0.35rem !important;
     }
 
     .fc .fc-prev-button,
     .fc .fc-next-button {
-      width: 2.75rem;
+      width: 2.5rem;
     }
     
     .fc-event-title .label-text {
@@ -251,6 +309,7 @@
 <body>
 
   <div id="calendar"></div>
+  <input class="calendar-date-input" id="calendar-date-input" type="date" tabindex="-1" aria-hidden="true">
   
 <!-- Bootstrapモーダル -->
 <div class="modal fade" id="tweetModal" tabindex="-1" aria-labelledby="tweetModalLabel" aria-hidden="true">
@@ -306,18 +365,72 @@
     titleEl.textContent = `${year}/${month}`;
     titleEl.setAttribute('role', 'button');
     titleEl.setAttribute('tabindex', '0');
-    titleEl.setAttribute('aria-label', '今日を表示');
+    titleEl.setAttribute('aria-label', '日付を選択');
 
-    if (!titleEl.dataset.todayBound) {
-      titleEl.dataset.todayBound = 'true';
-      titleEl.addEventListener('click', () => calendar.today());
+    if (!titleEl.dataset.datePickerBound) {
+      titleEl.dataset.datePickerBound = 'true';
+      titleEl.addEventListener('click', openCalendarDatePicker);
       titleEl.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          calendar.today();
+          openCalendarDatePicker();
         }
       });
     }
+  }
+
+  function formatInputDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseInputDate(value) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  function openCalendarDatePicker() {
+    const dateInput = document.getElementById('calendar-date-input');
+    if (!calendar || !dateInput) return;
+
+    dateInput.value = formatInputDate(calendar.view.currentStart);
+    dateInput.focus();
+    if (typeof dateInput.showPicker === 'function') {
+      dateInput.showPicker();
+    } else {
+      dateInput.click();
+    }
+  }
+
+  function updateModeButtons() {
+    const detailedButton = document.querySelector('.fc-detailedMode-button');
+    const simpleButton = document.querySelector('.fc-simpleMode-button');
+
+    if (detailedButton) {
+      detailedButton.classList.toggle('is-selected', displayMode === 'detailed');
+      detailedButton.setAttribute('aria-pressed', displayMode === 'detailed' ? 'true' : 'false');
+    }
+
+    if (simpleButton) {
+      simpleButton.classList.toggle('is-selected', displayMode === 'simple');
+      simpleButton.setAttribute('aria-pressed', displayMode === 'simple' ? 'true' : 'false');
+    }
+  }
+
+  function setDisplayMode(nextMode) {
+    if (displayMode === nextMode) {
+      updateModeButtons();
+      return;
+    }
+
+    displayMode = nextMode;
+    updateModeButtons();
+    calendar.refetchEvents();
+
+    const currentView = calendar.view.type;
+    calendar.changeView(currentView); // ←これが表示更新のトリガーになる！
   }
 
   function setCalendarNavIcons() {
@@ -346,22 +459,12 @@
   
     setTimeout(() => {
       const calendarEl = document.getElementById('calendar');
+      const dateInput = document.getElementById('calendar-date-input');
 
-      const modeToggleClick = function () {
-        displayMode = displayMode === "detailed" ? "simple" : "detailed";
-
-        calendar.setOption("customButtons", {
-          modeToggle: {
-            text: displayMode === "detailed" ? "詳細" : "簡略",
-            click: modeToggleClick
-          }
-        });
-          // ✅ イベント再取得
-          calendar.refetchEvents();
-
-          const currentView = calendar.view.type;
-          calendar.changeView(currentView); // ←これが表示更新のトリガーになる！
-      };
+      dateInput.addEventListener('change', () => {
+        if (!dateInput.value) return;
+        calendar.gotoDate(parseInputDate(dateInput.value));
+      });
 
       calendar = new FullCalendar.Calendar(calendarEl, {  // ✅ ← ここで代入！
         initialView: 'dayGridMonth',
@@ -374,14 +477,18 @@
         },
 
         customButtons: {
-          modeToggle: {
-            text: '詳細',
-            click: modeToggleClick
+          detailedMode: {
+            text: '詳細表示',
+            click: () => setDisplayMode('detailed')
+          },
+          simpleMode: {
+            text: '簡略表示',
+            click: () => setDisplayMode('simple')
           }
         },
 
         headerToolbar: {
-          left: 'prev title modeToggle next',
+          left: 'prev title detailedMode,simpleMode next',
           center: '',
           right: ''
         },
@@ -389,6 +496,7 @@
         datesSet: function (info) {
           setCalendarNavIcons();
           updateCalendarTitle(info.view.currentStart);
+          updateModeButtons();
         },
 
         eventDidMount: function(info) {
@@ -476,6 +584,7 @@
       calendar.render();
       setCalendarNavIcons();
       updateCalendarTitle(calendar.view.currentStart);
+      updateModeButtons();
       setLayoutVars();
     });
   });
