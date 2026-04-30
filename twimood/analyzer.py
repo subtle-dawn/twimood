@@ -6,8 +6,15 @@ from dotenv import load_dotenv
 from .definitions import ALL_LABELS
 
 # .envファイルからAPIキーを読み込む
-ENV_PATH = Path(__file__).resolve().parent / ".env"
-load_dotenv(ENV_PATH, override=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_PATHS = [
+    BASE_DIR / ".env",
+    Path(__file__).resolve().parent / ".env",
+]
+for env_path in ENV_PATHS:
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        break
 api_key = os.getenv("OPENAI_API_KEY")
 
 # OpenAIクライアント初期化

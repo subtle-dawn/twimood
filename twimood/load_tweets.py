@@ -8,13 +8,26 @@ import requests
 from dotenv import load_dotenv
 
 # .envファイルから環境変数を読み込む
-ENV_PATH = Path(__file__).resolve().parent / ".env"
-load_dotenv(ENV_PATH, override=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_PATHS = [
+    BASE_DIR / ".env",
+    Path(__file__).resolve().parent / ".env",
+]
+for env_path in ENV_PATHS:
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        break
 
 # API認証情報（Bearer Token と User ID）を環境変数から取得
 BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 USER_ID = os.getenv("X_USER_ID")
 X_API_BASE_URL = "https://api.x.com/2"
+
+
+def _get_without_system_proxy(url, **kwargs):
+    session = requests.Session()
+    session.trust_env = False
+    return session.get(url, **kwargs)
 
 
 def _format_x_error(response):
@@ -75,7 +88,7 @@ def fetch_tweets_from_api(start_time: datetime, end_time: datetime, max_results=
         if next_token:
             params["pagination_token"] = next_token
 
-        response = requests.get(url, headers=headers, params=params)
+        response = _get_without_system_proxy(url, headers=headers, params=params)
 
         if response.status_code == 429:
             wait_time = 16 * 60  # 16分 = 960秒

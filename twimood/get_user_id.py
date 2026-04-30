@@ -5,12 +5,26 @@ import requests
 from dotenv import load_dotenv
 
 # .envファイルから BEARER_TOKEN を読み込む
-ENV_PATH = Path(__file__).resolve().parent / ".env"
-load_dotenv(ENV_PATH, override=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_PATHS = [
+    BASE_DIR / ".env",
+    Path(__file__).resolve().parent / ".env",
+]
+for env_path in ENV_PATHS:
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        break
 
 BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 USERNAME = os.getenv("X_USER_NAME")
 X_API_BASE_URL = "https://api.x.com/2"
+
+
+def _get_without_system_proxy(url, **kwargs):
+    session = requests.Session()
+    session.trust_env = False
+    return session.get(url, **kwargs)
+
 
 def get_user_id(username):
     if not BEARER_TOKEN:
@@ -20,7 +34,7 @@ def get_user_id(username):
 
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
     url = f"{X_API_BASE_URL}/users/by/username/{username}"
-    response = requests.get(url, headers=headers)
+    response = _get_without_system_proxy(url, headers=headers)
     response.raise_for_status()
     return response.json()["data"]["id"]
 

@@ -1,8 +1,8 @@
 <nav class="navbar fixed-bottom navbar-light bg-light border-top">
   <div class="container-fluid d-flex justify-content-around">
-    <a class="nav-link {% if request.path == '/' %}active fw-bold{% endif %}" href="{% url 'setup' %}">取得</a>
-    <a class="nav-link {% if request.path == '/calendar/' %}active fw-bold{% endif %}" href="{% url 'calendar' %}">カレンダー</a>
-    <a class="nav-link {% if request.path == '/graph/' %}active fw-bold{% endif %}" href="{% url 'graph' %}">グラフ</a>
+    <a class="nav-link {% if request.resolver_match.url_name == 'setup' %}active fw-bold{% endif %}" href="{% url 'setup' %}">取得</a>
+    <a class="nav-link {% if request.resolver_match.url_name == 'calendar' %}active fw-bold{% endif %}" href="{% url 'calendar' %}">カレンダー</a>
+    <a class="nav-link {% if request.resolver_match.url_name == 'graph' %}active fw-bold{% endif %}" href="{% url 'graph' %}">グラフ</a>
   </div>
 </nav>
 
@@ -27,16 +27,13 @@
 }
 
 @media (max-width: 991px) {
-  html {
-    font-size: 28px;
+  .nav-link {
+    font-size: 1rem;
+    padding: 0.5rem 0.35rem;
   }
 }
 
 @media screen and (orientation: landscape) and (max-width: 991px) {
-  html {
-    font-size: 16px;
-  }
-
   .navbar {
     display: none;
   }

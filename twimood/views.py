@@ -238,7 +238,8 @@ def analyze_tweets(request):
         updated += 1
         sleep(0.8)  # 過負荷回避のため少し待つ
 
-    return JsonResponse({"analyzed": updated})
+    messages.success(request, f"分析できました。分析済みツイート: {updated}件")
+    return redirect("setup")
 
 # ✅ カレンダー用に日ごとの感情イベントを整形して返すビュー関数
 def emotion_calendar_events(request):

@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Twimood グラフ</title>
 
   <!-- Chart.js CDN -->
@@ -13,6 +14,12 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
 <style>
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 1rem;
+  }
+
   .container,
   .btn-group {
     width: 100%;
@@ -67,6 +74,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  Chart.defaults.font.size = 16;
+
   const ctx = document.getElementById('emotionChart').getContext('2d');
 
   const emotionChart = new Chart(ctx, {
