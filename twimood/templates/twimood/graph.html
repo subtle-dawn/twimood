@@ -16,8 +16,10 @@
 <style>
   body {
     margin: 0;
+    padding-bottom: 56px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1rem;
+    overflow: hidden;
   }
 
   .container,
@@ -36,12 +38,20 @@
   #chart-container {
     display: flex;
     justify-content: center;
+    width: 100%;
+    min-height: 240px;
+  }
+
+  #emotionChart {
+    width: 100% !important;
+    height: 100% !important;
   }
 
   /* スマホ横向き（ランドスケープ）時のグラフ最適化 */
   @media screen and (orientation: landscape) and (max-width: 768px) {
     body {
       height: calc(var(--vh, 1vh) * 100);
+      padding-bottom: 0;
     }
 
     #chart-container {
@@ -86,8 +96,17 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       spanGaps: false,
       scales: {
+        x: {
+          ticks: {
+            callback(value) {
+              const label = this.getLabelForValue(value);
+              return formatAxisLabel(label);
+            }
+          }
+        },
         y: {
           beginAtZero: true,
           suggestedMin: -10,
@@ -189,10 +208,32 @@ document.addEventListener('DOMContentLoaded', function () {
     if (currentUnit === 'month') return `${y}年${m}月`;
     if (currentUnit === 'week') {
       const start = new Date(currentDate);
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       const end = new Date(currentDate);
+      end.setTime(start.getTime());
       end.setDate(start.getDate() + 6);
       return `${start.getMonth() + 1}/${start.getDate()}〜${end.getMonth() + 1}/${end.getDate()}`;
     }
+  }
+
+  function formatAxisLabel(label) {
+    const datePart = String(label).split(' ')[0];
+    const parts = datePart.split('-');
+
+    if (currentUnit === 'year') {
+      return parts[1] ? `${Number(parts[1])}月` : label;
+    }
+
+    if (currentUnit === 'week') {
+      const weekday = String(label).match(/\(([^)]+)\)/)?.[1];
+      return parts[2] ? `${Number(parts[2])}日${weekday ? `(${weekday})` : ''}` : label;
+    }
+
+    if (currentUnit === 'month') {
+      return parts[2] ? `${Number(parts[2])}日` : label;
+    }
+
+    return label;
   }
 
   function fetchGraphData() {
@@ -233,16 +274,20 @@ function adjustChartHeight() {
   const vh = window.innerHeight;
   const unitSelector = document.getElementById('unit-selector');
   const navButtons = document.querySelector('.d-flex');
+  const bottomNav = document.querySelector('.navbar.fixed-bottom');
 
   const unitHeight = unitSelector?.offsetHeight || 0;
   const navHeight = navButtons?.offsetHeight || 0;
+  const bottomNavHeight = bottomNav && getComputedStyle(bottomNav).display !== 'none'
+    ? bottomNav.offsetHeight
+    : 0;
 
   // 合計差し引いて高さを設定
-  const chartHeight = vh - unitHeight - navHeight;
+  const chartHeight = vh - unitHeight - navHeight - bottomNavHeight;
 
   const chartContainer = document.getElementById('chart-container');
   if (chartContainer) {
-    chartContainer.style.height = `${chartHeight}px`;
+    chartContainer.style.height = `${Math.max(chartHeight, 240)}px`;
   }
 }
 
