@@ -120,7 +120,6 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
       width: 100%;
     }
 
@@ -128,23 +127,57 @@
       margin-top: 12px;
     }
 
-    .button-spinner {
+    .loading-overlay {
       display: none;
-      width: 1.25rem;
-      height: 1.25rem;
-      border: 3px solid rgba(255, 255, 255, 0.45);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      flex: 0 0 auto;
+      position: fixed;
+      inset: 0;
+      z-index: 1050;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      background: rgba(246, 248, 251, 0.86);
+      backdrop-filter: blur(3px);
     }
 
-    .is-loading .button-spinner {
-      display: inline-block;
+    .loading-overlay.is-visible {
+      display: flex;
+      cursor: wait;
+    }
+
+    .loading-message {
+      margin: 0;
+      color: #0d6efd;
+      font-size: clamp(1.4rem, 5vw, 2.4rem);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .loading-overlay.is-analyzing .loading-message {
+      color: #dc3545;
+    }
+
+    .loading-spinner {
+      width: min(34vw, 180px);
+      height: min(34vw, 180px);
+      border: 16px solid rgba(13, 110, 253, 0.2);
+      border-top-color: #0d6efd;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+      box-shadow: 0 0 44px rgba(13, 110, 253, 0.26);
+    }
+
+    .loading-overlay.is-analyzing .loading-spinner {
+      border-color: rgba(220, 53, 69, 0.2);
+      border-top-color: #dc3545;
+      box-shadow: 0 0 44px rgba(220, 53, 69, 0.26);
+    }
+
+    .loading-cancel {
+      min-width: 180px;
     }
 
     .is-loading {
-      cursor: wait;
       pointer-events: none;
     }
 
@@ -235,11 +268,9 @@
 
         <div class="actions">
           <button type="submit" class="btn btn-primary btn-lg" id="get_data_button">
-            <span class="button-spinner" aria-hidden="true"></span>
             <span class="button-label">選んだ方法でデータを取得</span>
           </button>
           <a class="btn btn-danger btn-lg" id="analyze_button" href="{% url 'analyze_tweets' %}">
-            <span class="button-spinner" aria-hidden="true"></span>
             <span class="button-label">OpenAI APIで未分析ツイートを分析</span>
           </a>
         </div>
@@ -250,14 +281,29 @@
 
   {% include "twimood/_navbar.html" %}
 
+  <div class="loading-overlay" id="loading_overlay" aria-hidden="true">
+    <p class="loading-message" id="loading_message">ツイートを取得中です…</p>
+    <div class="loading-spinner"></div>
+    <button type="button" class="btn btn-outline-secondary btn-lg loading-cancel" id="loading_cancel">キャンセル</button>
+  </div>
+
   <script>
     const form = document.querySelector('form');
     const getDataButton = document.getElementById('get_data_button');
     const analyzeButton = document.getElementById('analyze_button');
+    const loadingOverlay = document.getElementById('loading_overlay');
+    const loadingMessage = document.getElementById('loading_message');
+    const loadingCancel = document.getElementById('loading_cancel');
 
-    function showLoading(button) {
+    function showLoading(button, mode) {
       button.classList.add('is-loading');
       button.setAttribute('aria-busy', 'true');
+      loadingOverlay.classList.toggle('is-analyzing', mode === 'analyze');
+      loadingMessage.textContent = mode === 'analyze'
+        ? 'ツイートを分析中です…'
+        : 'ツイートを取得中です…';
+      loadingOverlay.classList.add('is-visible');
+      loadingOverlay.setAttribute('aria-hidden', 'false');
 
       if (button.tagName === 'BUTTON') {
         button.disabled = true;
@@ -266,13 +312,29 @@
       }
     }
 
+    function hideLoading() {
+      window.stop();
+      loadingOverlay.classList.remove('is-visible', 'is-analyzing');
+      loadingOverlay.setAttribute('aria-hidden', 'true');
+
+      getDataButton.classList.remove('is-loading');
+      getDataButton.removeAttribute('aria-busy');
+      getDataButton.disabled = false;
+
+      analyzeButton.classList.remove('is-loading');
+      analyzeButton.removeAttribute('aria-busy');
+      analyzeButton.removeAttribute('aria-disabled');
+    }
+
     form.addEventListener('submit', () => {
-      showLoading(getDataButton);
+      showLoading(getDataButton, 'get-data');
     });
 
     analyzeButton.addEventListener('click', () => {
-      showLoading(analyzeButton);
+      showLoading(analyzeButton, 'analyze');
     });
+
+    loadingCancel.addEventListener('click', hideLoading);
   </script>
 </body>
 </html>
