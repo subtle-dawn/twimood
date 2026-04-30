@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   window.currentUnit = 'month';
-  let currentDate = new Date();
+  let currentDate = parseInputDate('{{ today|escapejs }}');
 
   periodSelect.addEventListener('change', () => {
     currentUnit = periodSelect.value;
@@ -328,12 +328,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const start = new Date(currentDate);
       start.setMonth(currentDate.getMonth() - 1);
       start.setDate(currentDate.getDate() + 1);
-      return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
+      return `${formatDateWithYear(start)} - ${formatDateWithYear(currentDate)}`;
     }
 
     const start = new Date(currentDate);
     start.setDate(currentDate.getDate() - 6);
-    return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
+    return `${formatDateWithYear(start)} - ${formatDateWithYear(currentDate)}`;
   }
 
   function formatAxisLabel(label) {
@@ -356,8 +356,8 @@ document.addEventListener('DOMContentLoaded', function () {
     return label;
   }
 
-  function formatShortDate(date) {
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+  function formatDateWithYear(date) {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 
   function formatInputDate(date) {

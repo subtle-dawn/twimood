@@ -33,17 +33,11 @@ COLOR_UNKNOWN = "#9ca3af"
 
 # ✅ APIからツイートを取得してDBに保存するビュー関数
 def _default_start_date():
-    first_tweet = Tweet.objects.order_by("date").first()
-    if first_tweet:
-        return first_tweet.date.date()
-    return date.today() - timedelta(days=30)
+    return timezone.localdate()
 
 
 def _default_end_date():
-    last_tweet = Tweet.objects.order_by("-date").first()
-    if last_tweet:
-        return last_tweet.date.date()
-    return date.today()
+    return timezone.localdate()
 
 
 def _parse_date_range(request):
@@ -320,7 +314,9 @@ def emotion_calendar_events(request):
 
 # ✅ カレンダー画面を表示するビュー関数
 def calendar_page(request):
-    return render(request, 'twimood/calendar.html')
+    return render(request, 'twimood/calendar.html', {
+        "today": timezone.localdate().isoformat(),
+    })
 
 @require_GET
 # ✅ 指定ラベルに一致するツイートを日付で絞り込んで返すビュー関数
@@ -374,7 +370,9 @@ def get_tweets_by_label(request):
 
 # ✅ グラフ画面を表示するビュー関数
 def graph_page(request):
-    return render(request, 'twimood/graph.html')
+    return render(request, 'twimood/graph.html', {
+        "today": timezone.localdate().isoformat(),
+    })
 
 from .definitions import CATEGORY_MAP, CATEGORY_COLORS
 
