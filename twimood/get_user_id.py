@@ -1,16 +1,25 @@
-import requests
 import os
+from pathlib import Path
+
+import requests
 from dotenv import load_dotenv
 
 # .envファイルから BEARER_TOKEN を読み込む
-load_dotenv()
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(ENV_PATH, override=True)
 
 BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 USERNAME = os.getenv("X_USER_NAME")
+X_API_BASE_URL = "https://api.x.com/2"
 
 def get_user_id(username):
+    if not BEARER_TOKEN:
+        raise ValueError(".envにX_BEARER_TOKENを設定してください。")
+    if not username:
+        raise ValueError(".envにX_USER_NAMEを設定してください。")
+
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
-    url = f"https://api.twitter.com/2/users/by/username/{username}"
+    url = f"{X_API_BASE_URL}/users/by/username/{username}"
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     return response.json()["data"]["id"]

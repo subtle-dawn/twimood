@@ -1,5 +1,0 @@
-仮想環境有効化（毎回絶対やる）
-.\venv\Scripts\activate
-
-実行
-streamlit run app.py

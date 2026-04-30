@@ -1,10 +1,13 @@
 import openai
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 from .definitions import ALL_LABELS
 
 # .envファイルからAPIキーを読み込む
-load_dotenv()
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(ENV_PATH, override=True)
 api_key = os.getenv("OPENAI_API_KEY")
 
 # OpenAIクライアント初期化

@@ -91,11 +91,21 @@
       color: #64748b;
     }
 
+    .btn-check:checked+.btn .source-note{
+      color: #9cc3ff; 
+    }
+
     .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 24px;
+      margin-top: 1.5rem;
+    }
+
+    #get_data_button,
+    #analyze_button {
+      width: 100%;
+    }
+
+    #analyze_button {
+      margin-top: 12px;
     }
 
     @media (max-width: 640px) {
@@ -118,8 +128,8 @@
 <body>
   <main class="page">
     <section class="panel">
-      <h1 class="title">いつからいつまでのデータを取得しますか？</h1>
-      <p class="lead">期間を選んで、X APIまたはXアーカイブからツイートを読み込みます。</p>
+      <h1 class="title">ツイート取得</h1>
+      <p class="lead">期間を選んで、X APIまたはXアーカイブからツイートを取得します。</p>
 
       {% if messages %}
         {% for message in messages %}
@@ -152,26 +162,30 @@
           </div>
         </div>
 
+        <label for="start_date" class="form-label">取得方法</label>
         <div class="source-options" role="group" aria-label="データ取得元">
-          <input class="btn-check" type="radio" name="source" id="source_api" value="api" checked>
+          <input class="btn-check" type="radio" name="source" id="source_api" value="api">
           <label class="btn btn-outline-primary" for="source_api">
             <span class="source-title">X APIから取得</span>
-            <span class="source-note">自分のBearer TokenとUser IDを使います。API利用料金に注意してください。</span>
+            <span class="source-note">
+              自分のIDとUser ID、Bearer Tokenを使います。<br>
+              X API利用料金に注意してください。</span>
           </label>
 
-          <input class="btn-check" type="radio" name="source" id="source_archive" value="archive">
+          <input class="btn-check" type="radio" name="source" id="source_archive" value="archive" checked>
           <label class="btn btn-outline-primary" for="source_archive">
-            <span class="source-title">Xアーカイブから読み込み</span>
-            <span class="source-note">twimood/data/tweets.jsを期間で絞り込みます。X APIは使いません。</span>
+            <span class="source-title">Xアーカイブから取得</span>
+            <span class="source-note">
+              twimood/data/tweets.jsを使います。<br>
+              X APIは使いません。</span>
           </label>
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn btn-primary btn-lg">データを取得</button>
-          <a class="btn btn-outline-secondary btn-lg" href="{% url 'calendar' %}">カレンダーを見る</a>
-          <a class="btn btn-outline-secondary btn-lg" href="{% url 'graph' %}">グラフを見る</a>
-          <a class="btn btn-outline-danger btn-lg" href="{% url 'analyze_tweets' %}">OpenAI APIで未分析を分析</a>
+          <button type="submit" class="btn btn-primary btn-lg" id="get_data_button">選んだ方法でデータを取得</button>
+          <a class="btn btn-danger btn-lg" id="analyze_button" href="{% url 'analyze_tweets' %}">OpenAI APIで未分析ツイートを分析</a>
         </div>
+
       </form>
     </section>
   </main>

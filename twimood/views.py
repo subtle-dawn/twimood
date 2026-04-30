@@ -7,6 +7,7 @@ from collections import Counter
 from django.shortcuts import redirect, render
 from .load_tweets import load_tweets_from_api_1month
 import pandas as pd
+import requests
 from .analyzer import analyze_emotion_and_episode
 from django.views.decorators.http import require_GET
 from django.utils.dateparse import parse_date
@@ -109,7 +110,7 @@ def setup_page(request):
     }
 
     if request.method == "POST":
-        source = request.POST.get("source", "api")
+        source = request.POST.get("source", "archive")
 
         try:
             start_date, end_date, start, end = _parse_date_range(request)
@@ -134,6 +135,17 @@ def setup_page(request):
                 f"{source_label}から{start_date}〜{end_date}のデータを取得しました。新規追加: {created}件",
             )
             return redirect("setup")
+        except requests.exceptions.HTTPError as exc:
+            response = exc.response
+            if response is not None and response.status_code == 403:
+                messages.error(
+                    request,
+                    "X APIで403 Forbiddenが返りました。このBearer Tokenではユーザーの投稿取得が許可されていない可能性があります。"
+                    "X Developer Consoleで現在のAPIプランとAppの有効状態を確認してください。"
+                    f"詳細: {exc}",
+                )
+            else:
+                messages.error(request, f"X APIの呼び出しに失敗しました: {exc}")
         except Exception as exc:
             messages.error(request, str(exc))
 
