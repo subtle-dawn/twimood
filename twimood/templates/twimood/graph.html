@@ -296,19 +296,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (currentUnit === 'year') {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth() - 11, 1);
-      return `${start.getFullYear()}年${start.getMonth() + 1}月 - ${y}年${m}月`;
+      return `${start.getFullYear()}/${start.getMonth() + 1} - ${y}/${m}`;
     }
 
     if (currentUnit === 'month') {
       const start = new Date(currentDate);
       start.setMonth(currentDate.getMonth() - 1);
       start.setDate(currentDate.getDate() + 1);
-      return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
+      return `${formatFullDate(start)} - ${formatFullDate(currentDate)}`;
     }
 
     const start = new Date(currentDate);
     start.setDate(currentDate.getDate() - 6);
-    return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
+    return `${formatFullDate(start)} - ${formatFullDate(currentDate)}`;
   }
 
   function formatAxisLabel(label) {
@@ -333,6 +333,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function formatShortDate(date) {
     return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  function formatFullDate(date) {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 
   function formatInputDate(date) {
