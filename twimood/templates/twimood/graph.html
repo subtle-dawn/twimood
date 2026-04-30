@@ -55,13 +55,26 @@
   }
 
   .nav-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 2.75rem;
     border-color: var(--control-border);
     color: #28465c;
     background: #ffffff;
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 700;
     line-height: 1;
+  }
+
+  .nav-button svg {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.4;
   }
 
   .nav-button:hover,
@@ -116,6 +129,10 @@
     .date-picker-wrap {
       min-width: 9rem;
     }
+
+    .nav-button {
+      font-size: 0.9rem;
+    }
   }
 
   @media screen and (orientation: landscape) and (max-width: 768px) {
@@ -135,7 +152,11 @@
 
   <div class="graph-shell">
     <div class="graph-controls" id="graph-controls">
-      <button class="btn nav-button" id="prev-btn" type="button" aria-label="前へ">‹</button>
+      <button class="btn nav-button" id="prev-btn" type="button" aria-label="前へ">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m15 18-6-6 6-6"></path>
+        </svg>
+      </button>
 
       <div class="date-picker-wrap" id="date-picker-wrap">
         <button id="current-range" class="btn date-button" type="button" aria-label="日付を選択"></button>
@@ -148,7 +169,11 @@
         <option value="week">週</option>
       </select>
 
-      <button class="btn nav-button" id="next-btn" type="button" aria-label="次へ">›</button>
+      <button class="btn nav-button" id="next-btn" type="button" aria-label="次へ">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m9 18 6-6-6-6"></path>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -303,12 +328,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const start = new Date(currentDate);
       start.setMonth(currentDate.getMonth() - 1);
       start.setDate(currentDate.getDate() + 1);
-      return `${formatFullDate(start)} - ${formatFullDate(currentDate)}`;
+      return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
     }
 
     const start = new Date(currentDate);
     start.setDate(currentDate.getDate() - 6);
-    return `${formatFullDate(start)} - ${formatFullDate(currentDate)}`;
+    return `${formatShortDate(start)} - ${formatShortDate(currentDate)}`;
   }
 
   function formatAxisLabel(label) {
@@ -333,10 +358,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function formatShortDate(date) {
     return `${date.getMonth() + 1}/${date.getDate()}`;
-  }
-
-  function formatFullDate(date) {
-    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 
   function formatInputDate(date) {
