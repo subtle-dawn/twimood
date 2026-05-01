@@ -405,10 +405,12 @@ def get_tweets_by_label(request):
     from .definitions import EMOJI_MAP, CATEGORY_MAP
 
     date_str = request.GET.get("date")
+    start_str = request.GET.get("start")
+    end_str = request.GET.get("end")
     label = request.GET.get("label")
     mode = request.GET.get("mode", "detailed")
 
-    if not date_str or not label:
+    if not label or not (date_str or (start_str and end_str)):
         return JsonResponse({"tweets": []})
 
     # ラベルから絵文字を除去（🥰喜び → 喜び）
@@ -419,8 +421,13 @@ def get_tweets_by_label(request):
             label = category
             break
 
-    date = parse_date(date_str)
-    tweets = Tweet.objects.filter(date__date=date)
+    if start_str and end_str:
+        start_date = parse_date(start_str)
+        end_date = parse_date(end_str)
+        tweets = Tweet.objects.filter(date__date__gte=start_date, date__date__lte=end_date)
+    else:
+        date = parse_date(date_str)
+        tweets = Tweet.objects.filter(date__date=date)
 
     # 詳細表示では「躁」などの個別ラベルをそのまま対象にする。
     # 簡略表示ではカテゴリ名として扱い、カテゴリ内の語句すべてを対象にする。
@@ -526,6 +533,7 @@ def graph_data(request):
         if category in BIDIRECTIONAL_GRAPH_CATEGORIES:
             datasets.append({
                 "label": f"{category}（+）",
+                "category": category,
                 "data": values,
                 "backgroundColor": CATEGORY_COLORS[category],
                 "borderColor": CATEGORY_COLORS[category],
@@ -533,6 +541,7 @@ def graph_data(request):
             })
             datasets.append({
                 "label": f"{category}（-）",
+                "category": category,
                 "data": [-value for value in values],
                 "backgroundColor": CATEGORY_COLORS[category],
                 "borderColor": CATEGORY_COLORS[category],
@@ -544,6 +553,7 @@ def graph_data(request):
 
         datasets.append({
             "label": category,
+            "category": category,
             "data": data,
             "backgroundColor": CATEGORY_COLORS[category],
             "borderColor": CATEGORY_COLORS[category],

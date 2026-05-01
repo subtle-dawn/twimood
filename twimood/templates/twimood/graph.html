@@ -126,6 +126,14 @@
     height: 100% !important;
   }
 
+  .modal-dialog {
+    max-width: 95vw;
+  }
+
+  .modal-body td {
+    vertical-align: top;
+  }
+
   @media (max-width: 575px) {
     .graph-shell {
       padding: 0.55rem 0.5rem 0.45rem;
@@ -186,6 +194,18 @@
   <canvas id="emotionChart"></canvas>
 </div>
 
+<div class="modal fade" id="tweetModal" tabindex="-1" aria-labelledby="tweetModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tweetModalLabel">該当ツイート一覧</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body" id="modal_content"></div>
+    </div>
+  </div>
+</div>
+
 {% include "twimood/_navbar.html" %}
 
 <script>
@@ -196,6 +216,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const periodSelect = document.getElementById('period-select');
   const currentRangeButton = document.getElementById('current-range');
   const calendarInput = document.getElementById('calendar-input');
+  const categoryEmoji = {
+    "躁": "😡",
+    "喜び": "🥰",
+    "落ち込み": "😢",
+    "鬱": "🤢",
+    "躁鬱傾向": "🌗",
+    "ADHD傾向": "🤯"
+  };
 
   const emotionChart = new Chart(ctx, {
     type: 'line',
@@ -207,6 +235,13 @@ document.addEventListener('DOMContentLoaded', function () {
       responsive: true,
       maintainAspectRatio: false,
       spanGaps: false,
+      onClick(event, elements, chart) {
+        if (!elements.length) return;
+        openTweetModalForPoint(chart, elements[0]);
+      },
+      onHover(event, elements) {
+        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
       scales: {
         x: {
           ticks: {
@@ -375,6 +410,99 @@ document.addEventListener('DOMContentLoaded', function () {
   function parseInputDate(value) {
     const [year, month, day] = value.split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  function formatMonthEndDate(year, month) {
+    return formatInputDate(new Date(year, month, 0));
+  }
+
+  function getPointRange(label) {
+    const datePart = String(label).split(' ')[0];
+    const parts = datePart.split('-').map(Number);
+
+    if (currentUnit === 'year') {
+      const [year, month] = parts;
+      return {
+        start: `${year}-${String(month).padStart(2, '0')}-01`,
+        end: formatMonthEndDate(year, month),
+        titleDate: `${year}年${month}月`
+      };
+    }
+
+    const [year, month, day] = parts;
+    return {
+      date: datePart,
+      titleDate: `${year}年${month}月${day}日`
+    };
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function openTweetModalForPoint(chart, point) {
+    const dataset = chart.data.datasets[point.datasetIndex];
+    const rawValue = dataset.data[point.index] ?? 0;
+    const count = Math.abs(Number(rawValue));
+    if (!count) return;
+
+    const category = dataset.category || String(dataset.label).replace(/（[+-]）$/, '');
+    const range = getPointRange(chart.data.labels[point.index]);
+    const emoji = categoryEmoji[category] || '';
+    const title = `${range.titleDate}の ${emoji} ${category} のツイート一覧`;
+    const params = new URLSearchParams({
+      label: category,
+      mode: 'simple'
+    });
+
+    if (range.date) {
+      params.set('date', range.date);
+    } else {
+      params.set('start', range.start);
+      params.set('end', range.end);
+    }
+
+    document.getElementById("tweetModalLabel").textContent = title;
+    document.getElementById("modal_content").innerHTML = '<p class="mb-0">読み込み中です...</p>';
+
+    fetch(`/api/tweets/?${params}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.tweets.length) {
+          document.getElementById("modal_content").innerHTML = '<p class="mb-0">該当するツイートはありません。</p>';
+          return;
+        }
+
+        const rows = data.tweets.map(t => `
+          <tr>
+            <td>${escapeHtml(t.datetime)}</td>
+            <td>${escapeHtml(t.text)}</td>
+            <td>${escapeHtml(t.labels)}</td>
+          </tr>
+        `).join("");
+
+        document.getElementById("modal_content").innerHTML = `
+          <table class="table table-sm">
+            <thead>
+              <tr><th>日時</th><th>ツイート</th><th>感情やエピソード</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      })
+      .catch(error => {
+        console.error('ツイート取得エラー:', error);
+        document.getElementById("modal_content").innerHTML = '<p class="mb-0">ツイートの取得に失敗しました。</p>';
+      });
+
+    const modal = new bootstrap.Modal(document.getElementById('tweetModal'));
+    modal.show();
   }
 
   function fetchGraphData() {
