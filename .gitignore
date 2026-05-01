@@ -1,3 +1,5 @@
 .env
 db.sqlite3
 tweets.js
+__pycache__/
+*.pyc

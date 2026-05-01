@@ -8,7 +8,7 @@ from django.shortcuts import redirect, render
 from .load_tweets import load_tweets_from_api_1month
 import pandas as pd
 import requests
-from .analyzer import analyze_emotion_and_episode
+from .analyzer import AnalysisError, analyze_emotion_and_episode
 from django.views.decorators.http import require_GET
 from django.utils.dateparse import parse_date
 from django.utils import timezone
@@ -73,6 +73,9 @@ def _save_tweets_from_archive(start, end):
     tweets = load_ytd_archive(archive_path)
 
     created = 0
+    matched = 0
+    min_date = None
+    max_date = None
     for t in tweets:
         text = t.get("full_text") or t.get("text")
         created_at = t.get("created_at")
@@ -85,14 +88,23 @@ def _save_tweets_from_archive(start, end):
         except ValueError:
             continue
 
+        min_date = dt if min_date is None else min(min_date, dt)
+        max_date = dt if max_date is None else max(max_date, dt)
+
         if not (start <= dt <= end):
             continue
 
+        matched += 1
         if not Tweet.objects.filter(date=dt, text=text).exists():
             Tweet.objects.create(date=dt, text=text)
             created += 1
 
-    return created
+    return {
+        "created": created,
+        "matched": matched,
+        "min_date": min_date,
+        "max_date": max_date,
+    }
 
 
 def setup_page(request):
@@ -104,6 +116,16 @@ def setup_page(request):
     }
 
     if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "delete_unanalyzed":
+            deleted, _ = Tweet.objects.filter(labels="").delete()
+            messages.success(request, f"未分析ツイートを削除しました。削除件数: {deleted}件")
+            return redirect("setup")
+        if action == "delete_saved":
+            deleted, _ = Tweet.objects.all().delete()
+            messages.success(request, f"保存済みツイートを削除しました。削除件数: {deleted}件")
+            return redirect("setup")
+
         source = request.POST.get("source", "archive")
 
         try:
@@ -112,7 +134,8 @@ def setup_page(request):
             context["end_date"] = end_date.isoformat()
 
             if source == "archive":
-                created = _save_tweets_from_archive(start, end)
+                archive_result = _save_tweets_from_archive(start, end)
+                created = archive_result["created"]
                 source_label = "Xアーカイブ"
             else:
                 from .load_tweets import load_tweets_from_api_range
@@ -122,12 +145,28 @@ def setup_page(request):
                     end.astimezone(dt_timezone.utc).replace(tzinfo=None),
                 )
                 created = _save_tweets_from_dataframe(df)
+                archive_result = None
                 source_label = "X API"
 
-            messages.success(
-                request,
-                f"{source_label}から{start_date}〜{end_date}のデータを取得しました。新規追加: {created}件",
-            )
+            if source == "archive" and archive_result and archive_result["matched"] == 0:
+                min_date = archive_result["min_date"]
+                max_date = archive_result["max_date"]
+                if min_date and max_date:
+                    messages.warning(
+                        request,
+                        (
+                            f"{source_label}内に{start_date}〜{end_date}のツイートがありませんでした。"
+                            f"このtweets.jsの収録期間: "
+                            f"{timezone.localtime(min_date).date()}〜{timezone.localtime(max_date).date()}"
+                        ),
+                    )
+                else:
+                    messages.warning(request, f"{source_label}から読み込めるツイートがありませんでした。")
+            else:
+                messages.success(
+                    request,
+                    f"{source_label}から{start_date}〜{end_date}のデータを取得しました。新規追加: {created}件",
+                )
             return redirect("setup")
         except requests.exceptions.HTTPError as exc:
             response = exc.response
@@ -190,8 +229,8 @@ def import_between_mar24_may8(request):
 
 # ✅ アーカイブファイルからツイートを読み込むビュー関数
 def import_archive_view(request):
-    filepath = "data/tweets.js"  # ← 実際のファイルパスに修正
-    tweets = load_ytd_archive(filepath)
+    archive_path = settings.BASE_DIR / "twimood" / "data" / "tweets.js"
+    tweets = load_ytd_archive(archive_path)
 
     created = 0
     cutoff_date = datetime(2025, 3, 1, tzinfo=datetime.now().astimezone().tzinfo)
@@ -222,11 +261,44 @@ def import_archive_view(request):
 def analyze_tweets(request):
     from time import sleep
 
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        tweet = Tweet.objects.filter(labels="").order_by("id").first()
+        if tweet is None:
+            return JsonResponse({
+                "updated": 0,
+                "remaining": 0,
+                "done": True,
+            })
+
+        try:
+            labels, _ = analyze_emotion_and_episode(tweet.text)
+        except AnalysisError as exc:
+            return JsonResponse({
+                "updated": 0,
+                "remaining": Tweet.objects.filter(labels="").count(),
+                "done": False,
+                "error": str(exc),
+            }, status=502)
+
+        tweet.labels = labels
+        tweet.save()
+        remaining = Tweet.objects.filter(labels="").count()
+        return JsonResponse({
+            "updated": 1,
+            "remaining": remaining,
+            "done": remaining == 0,
+        })
+
     tweets = Tweet.objects.filter(labels="")
     updated = 0
 
     for tweet in tweets:
-        labels, _ = analyze_emotion_and_episode(tweet.text)
+        try:
+            labels, _ = analyze_emotion_and_episode(tweet.text)
+        except AnalysisError as exc:
+            messages.error(request, str(exc))
+            return redirect("setup")
+
         tweet.labels = labels
         tweet.save()
         updated += 1
@@ -234,6 +306,15 @@ def analyze_tweets(request):
 
     messages.success(request, f"分析できました。分析済みツイート: {updated}件")
     return redirect("setup")
+
+
+@require_GET
+def analyze_progress(request):
+    return JsonResponse({
+        "remaining": Tweet.objects.filter(labels="").count(),
+        "total": Tweet.objects.count(),
+    })
+
 
 # ✅ カレンダー用に日ごとの感情イベントを整形して返すビュー関数
 def emotion_calendar_events(request):

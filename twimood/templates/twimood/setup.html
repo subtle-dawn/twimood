@@ -102,13 +102,19 @@
     }
 
     .source-option:has(.form-check-input:checked) {
-      border-color: #0d6efd;
-      background: #f0f6ff;
+      border-color: #1DA1F2;
+      background: #eef8ff;
     }
 
     .source-option .form-check-input {
       flex: 0 0 auto;
       margin-top: 4px;
+      accent-color: #1DA1F2;
+    }
+
+    .source-option .form-check-input:checked {
+      border-color: #1DA1F2;
+      background-color: #1DA1F2;
     }
 
     .source-option label {
@@ -128,12 +134,9 @@
       color: #64748b;
     }
 
-    .actions {
-      margin-top: 1.5rem;
-    }
-
     #get_data_button,
-    #analyze_button {
+    #analyze_button,
+    .delete-button {
       display: inline-flex;
       flex-direction: column;
       align-items: center;
@@ -141,8 +144,55 @@
       width: 100%;
     }
 
+    #get_data_button {
+      border-color: #1DA1F2;
+      background: #1DA1F2;
+      box-shadow: 0 8px 18px rgba(29, 161, 242, 0.22);
+      margin-top: 12px;
+    }
+
+    #get_data_button:hover,
+    #get_data_button:focus-visible {
+      border-color: #168bd1;
+      background: #168bd1;
+    }
+
     #analyze_button {
       margin-top: 12px;
+      border-color: #6c757d;
+      background: #6c757d;
+    }
+
+    #analyze_button:hover,
+    #analyze_button:focus-visible {
+      border-color: #5c636a;
+      background: #5c636a;
+    }
+
+    .delete-form {
+      margin-top: 12px;
+    }
+
+    .delete-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .delete-actions .delete-form {
+      margin-top: 0;
+    }
+
+    #confirm_yes {
+      border-color: #1DA1F2;
+      background: #1DA1F2;
+    }
+
+    #confirm_yes:hover,
+    #confirm_yes:focus-visible {
+      border-color: #168bd1;
+      background: #168bd1;
     }
 
     .analyze-note {
@@ -175,30 +225,58 @@
 
     .loading-message {
       margin: 0;
-      color: #0d6efd;
+      color: #1DA1F2;
       font-size: clamp(1.4rem, 5vw, 2.4rem);
       font-weight: 700;
       text-align: center;
     }
 
     .loading-overlay.is-analyzing .loading-message {
-      color: #dc3545;
+      color: #6c757d;
     }
 
     .loading-spinner {
       width: min(34vw, 180px);
       height: min(34vw, 180px);
-      border: 16px solid rgba(13, 110, 253, 0.2);
-      border-top-color: #0d6efd;
+      border: 16px solid rgba(29, 161, 242, 0.2);
+      border-top-color: #1DA1F2;
       border-radius: 50%;
       animation: spin 0.85s linear infinite;
-      box-shadow: 0 0 44px rgba(13, 110, 253, 0.26);
+      box-shadow: 0 0 44px rgba(29, 161, 242, 0.26);
     }
 
     .loading-overlay.is-analyzing .loading-spinner {
-      border-color: rgba(220, 53, 69, 0.2);
-      border-top-color: #dc3545;
-      box-shadow: 0 0 44px rgba(220, 53, 69, 0.26);
+      position: relative;
+      width: min(72vw, 420px);
+      height: 18px;
+      overflow: hidden;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(108, 117, 125, 0.18);
+      animation: none;
+      box-shadow: 0 10px 28px rgba(108, 117, 125, 0.18);
+    }
+
+    .loading-overlay.is-analyzing .loading-spinner::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--progress, 0%);
+      border-radius: inherit;
+      background: #6c757d;
+      transition: width 0.35s ease;
+    }
+
+    .loading-progress-detail {
+      display: none;
+      margin: -12px 0 0;
+      color: #6c757d;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .loading-overlay.is-analyzing .loading-progress-detail {
+      display: block;
     }
 
     .loading-cancel {
@@ -226,7 +304,8 @@
       }
 
       .status-grid,
-      .source-options {
+      .source-options,
+      .delete-actions {
         grid-template-columns: 1fr;
       }
     }
@@ -239,11 +318,13 @@
       <h1 class="title">ツイート取得</h1>
       <p class="lead">期間を選んで、XアーカイブまたはX APIからツイートを取得します。</p>
 
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} mb-3" role="alert">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
+      <div id="messages_container">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} mb-3" role="alert">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
 
       <div class="status-grid">
         <div class="status-item">
@@ -251,12 +332,12 @@
           <div class="status-value">{{ tweet_count }}</div>
         </div>
         <div class="status-item">
-          <div class="status-label">未分析ツイート</div>
+          <div class="status-label">うち未分析ツイート</div>
           <div class="status-value">{{ unanalyzed_count }}</div>
         </div>
       </div>
 
-      <form method="post">
+      <form method="post" id="get_data_form">
         {% csrf_token %}
 
         <div class="row g-3 mb-4">
@@ -299,13 +380,28 @@
           <button type="submit" class="btn btn-primary btn-lg" id="get_data_button">
             <span class="button-label">選んだ方法でデータを取得</span>
           </button>
-          <a class="btn btn-danger btn-lg" id="analyze_button" href="{% url 'analyze_tweets' %}">
-            <span class="button-label">未分析ツイートを分析</span>
-            <span class="analyze-note">OpenAI APIの利用料金がかかる場合があります。</span>
-          </a>
         </div>
 
       </form>
+
+      <div class="actions">
+        <a class="btn btn-secondary btn-lg" id="analyze_button" href="{% url 'analyze_tweets' %}">
+          <span class="button-label">未分析ツイートを分析</span>
+          <span class="analyze-note">OpenAI APIの利用料金がかかる場合があります。</span>
+        </a>
+        <div class="delete-actions">
+          <form method="post" action="{% url 'setup' %}" class="delete-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_unanalyzed">
+            <button type="submit" class="btn btn-danger btn-lg delete-button">未分析ツイートを削除</button>
+          </form>
+          <form method="post" action="{% url 'setup' %}" class="delete-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_saved">
+            <button type="submit" class="btn btn-danger btn-lg delete-button">保存済みツイートを削除</button>
+          </form>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -313,17 +409,96 @@
 
   <div class="loading-overlay" id="loading_overlay" aria-hidden="true">
     <p class="loading-message" id="loading_message">ツイートを取得中です…</p>
-    <div class="loading-spinner"></div>
+    <div class="loading-spinner" id="loading_progress_bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+    <p class="loading-progress-detail" id="loading_progress_detail">0%</p>
     <button type="button" class="btn btn-outline-secondary btn-lg loading-cancel" id="loading_cancel">キャンセル</button>
   </div>
 
+  <div class="modal fade" id="confirm_modal" tabindex="-1" aria-labelledby="confirm_modal_label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="confirm_modal_label">確認</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+        </div>
+        <div class="modal-body" id="confirm_modal_message"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="confirm_no">いいえ</button>
+          <button type="button" class="btn btn-primary" id="confirm_yes">はい</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const form = document.querySelector('form');
+    const form = document.getElementById('get_data_form');
     const getDataButton = document.getElementById('get_data_button');
     const analyzeButton = document.getElementById('analyze_button');
+    const deleteForms = document.querySelectorAll('.delete-form');
+    const messagesContainer = document.getElementById('messages_container');
     const loadingOverlay = document.getElementById('loading_overlay');
     const loadingMessage = document.getElementById('loading_message');
     const loadingCancel = document.getElementById('loading_cancel');
+    const loadingProgressBar = document.getElementById('loading_progress_bar');
+    const loadingProgressDetail = document.getElementById('loading_progress_detail');
+    const confirmModalElement = document.getElementById('confirm_modal');
+    const confirmModalMessage = document.getElementById('confirm_modal_message');
+    const confirmYes = document.getElementById('confirm_yes');
+    const confirmModal = new bootstrap.Modal(confirmModalElement);
+    let confirmCallback = null;
+    let analyzeAbortController = null;
+    const analyzeSuccessMessageKey = 'twimoodAnalyzeSuccessMessage';
+
+    function showPageAlert(message, type = 'success') {
+      messagesContainer.innerHTML = '';
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type} mb-3`;
+      alert.setAttribute('role', 'alert');
+      alert.textContent = message;
+      messagesContainer.appendChild(alert);
+    }
+
+    const storedAnalyzeSuccessMessage = sessionStorage.getItem(analyzeSuccessMessageKey);
+    if (storedAnalyzeSuccessMessage) {
+      sessionStorage.removeItem(analyzeSuccessMessageKey);
+      showPageAlert(storedAnalyzeSuccessMessage, 'success');
+    }
+
+    function showConfirm(message, onYes) {
+      confirmModalMessage.textContent = message;
+      confirmCallback = onYes;
+      confirmModal.show();
+    }
+
+    confirmYes.addEventListener('click', () => {
+      const callback = confirmCallback;
+      confirmCallback = null;
+      confirmModal.hide();
+
+      if (callback) {
+        callback();
+      }
+    });
+
+    confirmModalElement.addEventListener('hidden.bs.modal', () => {
+      confirmCallback = null;
+    });
+
+    function getSelectedSourceName() {
+      const selectedSource = form.querySelector('input[name="source"]:checked');
+      if (!selectedSource) {
+        return '選んだ方法';
+      }
+      return selectedSource.value === 'api' ? 'X API' : 'Xアーカイブ';
+    }
+
+    function getDataConfirmMessage() {
+      const sourceName = getSelectedSourceName();
+      const apiNote = sourceName === 'X API'
+        ? 'また、X APIの利用料金に注意してください。'
+        : '';
+      return `${sourceName}からデータを取得しますか？ 時間がかかる場合があります。${apiNote}`;
+    }
 
     function showLoading(button, mode) {
       button.classList.add('is-loading');
@@ -332,6 +507,7 @@
       loadingMessage.textContent = mode === 'analyze'
         ? 'ツイートを分析中です…'
         : 'ツイートを取得中です…';
+      setAnalyzeProgress(0, mode === 'analyze' ? '0%' : '');
       loadingOverlay.classList.add('is-visible');
       loadingOverlay.setAttribute('aria-hidden', 'false');
 
@@ -342,10 +518,41 @@
       }
     }
 
+    function setAnalyzeProgress(percent, detailText) {
+      const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+      loadingProgressBar.style.setProperty('--progress', `${safePercent}%`);
+      loadingProgressBar.setAttribute('aria-valuenow', String(safePercent));
+      loadingProgressDetail.textContent = detailText || `${safePercent}%`;
+    }
+
+    function startAnalyzeProgress(initialRemaining) {
+      setAnalyzeProgress(0, `0 / ${initialRemaining}件`);
+    }
+
+    function updateAnalyzeProgressFromRemaining(initialRemaining, remaining) {
+      if (initialRemaining <= 0) {
+        setAnalyzeProgress(100, '100%');
+        return;
+      }
+
+      const completed = Math.max(0, initialRemaining - remaining);
+      const percent = (completed / initialRemaining) * 100;
+      setAnalyzeProgress(percent, `${completed} / ${initialRemaining}件`);
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     function hideLoading() {
       window.stop();
+      if (analyzeAbortController) {
+        analyzeAbortController.abort();
+        analyzeAbortController = null;
+      }
       loadingOverlay.classList.remove('is-visible', 'is-analyzing');
       loadingOverlay.setAttribute('aria-hidden', 'true');
+      setAnalyzeProgress(0, '0%');
 
       getDataButton.classList.remove('is-loading');
       getDataButton.removeAttribute('aria-busy');
@@ -356,12 +563,79 @@
       analyzeButton.removeAttribute('aria-disabled');
     }
 
-    form.addEventListener('submit', () => {
-      showLoading(getDataButton, 'get-data');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      showConfirm(getDataConfirmMessage(), () => {
+        showLoading(getDataButton, 'get-data');
+        form.submit();
+      });
     });
 
-    analyzeButton.addEventListener('click', () => {
-      showLoading(analyzeButton, 'analyze');
+    analyzeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      showConfirm(
+        'AIで分析しますか？ 時間がかかる場合があります。OpenAI APIの利用料金がかかる場合があります。',
+        async () => {
+          showLoading(analyzeButton, 'analyze');
+          const initialRemaining = Number("{{ unanalyzed_count|default:0 }}");
+          startAnalyzeProgress(initialRemaining);
+          analyzeAbortController = new AbortController();
+
+          try {
+            let remaining = initialRemaining;
+
+            while (remaining > 0) {
+              const response = await fetch(analyzeButton.href, {
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                signal: analyzeAbortController.signal,
+              });
+              if (!response.ok) {
+                throw new Error('分析に失敗しました。');
+              }
+
+              const result = await response.json();
+              remaining = Math.max(0, Number(result.remaining || 0));
+              updateAnalyzeProgressFromRemaining(initialRemaining, remaining);
+
+              if (result.done) {
+                break;
+              }
+
+              await wait(800);
+            }
+
+            const completed = Math.max(0, initialRemaining - remaining);
+            setAnalyzeProgress(100, `${completed} / ${initialRemaining}件`);
+            sessionStorage.setItem(
+              analyzeSuccessMessageKey,
+              `分析できました。分析済みツイート: ${completed}件`
+            );
+            window.location.reload();
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              loadingMessage.textContent = error.message;
+            }
+          } finally {
+            analyzeAbortController = null;
+          }
+        }
+      );
+    });
+
+    deleteForms.forEach((deleteForm) => {
+      deleteForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const action = deleteForm.querySelector('input[name="action"]').value;
+        const message = action === 'delete_unanalyzed'
+          ? '未分析ツイートを削除しますか？'
+          : '保存済みツイートを削除しますか？';
+        showConfirm(message, () => {
+          deleteForm.submit();
+        });
+      });
     });
 
     loadingCancel.addEventListener('click', hideLoading);

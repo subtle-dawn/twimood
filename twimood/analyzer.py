@@ -1,11 +1,13 @@
-import openai
 import os
 from pathlib import Path
 
+import httpx
+import openai
 from dotenv import load_dotenv
+
 from .definitions import ALL_LABELS
 
-# .envファイルからAPIキーを読み込む
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATHS = [
     BASE_DIR / ".env",
@@ -15,32 +17,57 @@ for env_path in ENV_PATHS:
     if env_path.exists():
         load_dotenv(env_path, override=True)
         break
+
 api_key = os.getenv("OPENAI_API_KEY")
 
-# OpenAIクライアント初期化
-client = openai.OpenAI(api_key=api_key)
+# Some local shells set HTTP(S)_PROXY to a dead localhost port. OpenAI/httpx
+# honors proxy env vars by default, so ignore ambient proxy settings here.
+http_client = httpx.Client(trust_env=False, timeout=30)
+client = openai.OpenAI(api_key=api_key, http_client=http_client)
 
-# フィルタ用のセット
 valid_labels = ALL_LABELS
 
+
+class AnalysisError(Exception):
+    pass
+
+
+def _extract_labels(content):
+    value = content.strip()
+    for line in content.splitlines():
+        if "感情・エピソード" in line:
+            value = line.split("：", 1)[-1].split(":", 1)[-1].strip()
+            break
+
+    if not value or value.lower() in {"なし", "特になし", "none"}:
+        return "なし"
+
+    words = [word.strip() for word in value.replace("、", ",").split(",")]
+    words = [word for word in words if word in valid_labels]
+    return ", ".join(words) if words else "なし"
+
+
 def analyze_emotion_and_episode(text):
+    if not api_key:
+        raise AnalysisError("OPENAI_API_KEY が設定されていません。")
+
     prompt = f"""
-    あなたは、ツイートの感情や行動（エピソード）を分類する専門家です。
-    これは「ツイムード」というアプリで使用され、ツイートの中からユーザーの心理状態や日常行動を抽出することを目的としています。
+あなたは、ツイートの感情や行動（エピソード）を分類する専門家です。
+これは「ツイムード」というアプリで使用され、ツイートの中からユーザーの心理状態や日常行動を抽出することを目的としています。
 
-    以下のリストに含まれる語句のうち、ツイートから**明確に読み取れるものをすべて抽出**してください。
-    曖昧なものやリストにない語は「なし」とし、文脈補完は行わないでください。
+以下のリストに含まれる語句のうち、ツイートから明確に読み取れるものをすべて抽出してください。
+曖昧なものやリストにない語句は「なし」とし、文章で補完しないでください。
 
-    【抽出対象語リスト】
-    {", ".join(sorted(valid_labels))}
+【抽出対象語リスト】
+{", ".join(sorted(valid_labels))}
 
-    ※リストにない語句（例：「楽しい気分」「眠い」「外出」など）は抽出対象に含めないでください。
+※リストにない語句（例: 楽しい気分、眠い、外食など）は抽出対象に含めないでください。
 
-    ツイート: 「{text}」
+ツイート: 「{text}」
 
-    回答形式：
-    感情やエピソード：xxx, xxx, ...
-    """
+回答形式:
+感情・エピソード：xx, xxx, ...
+"""
 
     try:
         response = client.chat.completions.create(
@@ -49,25 +76,19 @@ def analyze_emotion_and_episode(text):
             max_tokens=150,
             temperature=0.4,
         )
+    except openai.APIConnectionError as exc:
+        raise AnalysisError(
+            "OpenAI API に接続できませんでした。ネットワーク接続やプロキシ設定を確認してください。"
+        ) from exc
+    except openai.AuthenticationError as exc:
+        raise AnalysisError("OpenAI API キーが無効、または期限切れの可能性があります。") from exc
+    except openai.RateLimitError as exc:
+        raise AnalysisError("OpenAI API のレート制限またはクォータ上限に達しました。") from exc
+    except openai.APIError as exc:
+        raise AnalysisError(f"OpenAI API エラー: {exc}") from exc
+    except Exception as exc:
+        raise AnalysisError(f"分析に失敗しました: {exc}") from exc
 
-        content = response.choices[0].message.content.strip()
-        print("📩 応答内容:", content)
-
-        value = ""
-        for line in content.splitlines():
-            if "感情やエピソード" in line:
-                value = line.split("：", 1)[-1].strip()
-                break
-
-        if not value or value.lower() in ["なし", "特になし", "none"]:
-            value = "なし"
-        else:
-            words = [w.strip() for w in value.split(",")]
-            words = [w for w in words if w in valid_labels]
-            value = ", ".join(words)
-
-        return value, ""
-
-    except Exception as e:
-        print("🚨 APIエラー:", e)
-        return f"エラー: {e}", ""
+    content = response.choices[0].message.content or ""
+    print("OpenAI response:", content)
+    return _extract_labels(content), ""
