@@ -587,7 +587,16 @@
                 signal: analyzeAbortController.signal,
               });
               if (!response.ok) {
-                throw new Error('分析に失敗しました。');
+                let message = '分析に失敗しました。';
+                try {
+                  const errorResult = await response.json();
+                  if (errorResult.error) {
+                    message = errorResult.error;
+                  }
+                } catch (parseError) {
+                  // Keep the generic message when the server did not return JSON.
+                }
+                throw new Error(message);
               }
 
               const result = await response.json();

@@ -72,11 +72,20 @@ def analyze_emotion_and_episode(text):
 """
 
     try:
+        completion_params = {
+            "model": analysis_ai_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.4,
+        }
+        if analysis_ai_model.startswith(("gpt-5", "o")):
+            completion_params["max_completion_tokens"] = 800
+            completion_params["reasoning_effort"] = "low"
+            completion_params.pop("temperature", None)
+        else:
+            completion_params["max_tokens"] = 150
+
         response = client.chat.completions.create(
-            model=analysis_ai_model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
-            temperature=0.4,
+            **completion_params,
         )
     except openai.APIConnectionError as exc:
         raise AnalysisError(
@@ -86,11 +95,22 @@ def analyze_emotion_and_episode(text):
         raise AnalysisError("OpenAI API キーが無効、または期限切れの可能性があります。") from exc
     except openai.RateLimitError as exc:
         raise AnalysisError("OpenAI API のレート制限またはクォータ上限に達しました。") from exc
+    except openai.NotFoundError as exc:
+        raise AnalysisError(f"OpenAI モデルが見つかりません: {analysis_ai_model}") from exc
+    except openai.PermissionDeniedError as exc:
+        raise AnalysisError(f"このAPIキーではモデルを利用できません: {analysis_ai_model}") from exc
+    except openai.BadRequestError as exc:
+        raise AnalysisError(f"OpenAI API リクエストが無効です: {exc}") from exc
     except openai.APIError as exc:
         raise AnalysisError(f"OpenAI API エラー: {exc}") from exc
     except Exception as exc:
         raise AnalysisError(f"分析に失敗しました: {exc}") from exc
 
     content = response.choices[0].message.content or ""
+    if not content.strip():
+        finish_reason = response.choices[0].finish_reason
+        raise AnalysisError(
+            f"OpenAI API から空の応答が返りました。モデル: {analysis_ai_model}, finish_reason: {finish_reason}"
+        )
     print("OpenAI response:", content)
     return _extract_labels(content), ""
