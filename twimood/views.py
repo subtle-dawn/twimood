@@ -422,8 +422,9 @@ def get_tweets_by_label(request):
     date = parse_date(date_str)
     tweets = Tweet.objects.filter(date__date=date)
 
-    # カテゴリ名なら、その語句すべてを対象に
-    if label in CATEGORY_MAP:
+    # 詳細表示では「躁」などの個別ラベルをそのまま対象にする。
+    # 簡略表示ではカテゴリ名として扱い、カテゴリ内の語句すべてを対象にする。
+    if mode == "simple" and label in CATEGORY_MAP:
         keywords = CATEGORY_MAP[label]
     else:
         keywords = {label}
