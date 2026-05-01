@@ -411,7 +411,7 @@ def get_tweets_by_label(request):
     if not date_str or not label:
         return JsonResponse({"tweets": []})
 
-    # ラベルから絵文字を除去（🥰ポジティブな興奮 → ポジティブな興奮）
+    # ラベルから絵文字を除去（🥰喜び → 喜び）
     emoji_to_category = {v: k for k, v in CATEGORY_EMOJI.items()}
 
     for emoji, category in emoji_to_category.items():
@@ -455,7 +455,12 @@ def graph_page(request):
         "today": timezone.localdate().isoformat(),
     })
 
-from .definitions import CATEGORY_MAP, CATEGORY_COLORS
+from .definitions import (
+    BIDIRECTIONAL_GRAPH_CATEGORIES,
+    CATEGORY_COLORS,
+    CATEGORY_MAP,
+    NEGATIVE_GRAPH_CATEGORIES,
+)
 
 @require_GET
 # ✅ グラフ用の集計データ（感情カテゴリごとの時系列）を返すビュー関数
@@ -512,14 +517,29 @@ def graph_data(request):
 
     data_keys = [key.split()[0] for key in labels]
 
-    # datasets構築（4本の棒）
+    # datasets構築（カテゴリごとの棒）
     datasets = []
     for category in CATEGORY_MAP:
-        # 落ち込みカテゴリだけ負の数値にする
-        if category in {"正常な落ち込み", "異常な落ち込み"}:
-            data = [-counter[k][category] if k in counter else 0 for k in data_keys]
-        else:
-            data = [counter[k][category] if k in counter else 0 for k in data_keys]
+        values = [counter[k][category] if k in counter else 0 for k in data_keys]
+
+        if category in BIDIRECTIONAL_GRAPH_CATEGORIES:
+            datasets.append({
+                "label": f"{category}（+）",
+                "data": values,
+                "backgroundColor": CATEGORY_COLORS[category],
+                "borderColor": CATEGORY_COLORS[category],
+                "tension": 0.3
+            })
+            datasets.append({
+                "label": f"{category}（-）",
+                "data": [-value for value in values],
+                "backgroundColor": CATEGORY_COLORS[category],
+                "borderColor": CATEGORY_COLORS[category],
+                "tension": 0.3
+            })
+            continue
+
+        data = [-value for value in values] if category in NEGATIVE_GRAPH_CATEGORIES else values
 
         datasets.append({
             "label": category,

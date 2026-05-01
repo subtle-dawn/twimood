@@ -58,9 +58,11 @@ X_USER_NAME=your_x_user_name_here
 X_USER_ID=your_x_user_id_here
 X_BEARER_TOKEN=your_x_bearer_token_here
 OPENAI_API_KEY=your_openai_api_key_here
+ANALYSIS_AI_MODEL=gpt-3.5-turbo
 ```
 
 X アーカイブだけを使う場合、投稿の取り込みには X API の値は不要です。分析を実行する場合は `OPENAI_API_KEY` が必要です。
+分析に使うモデルを変えたい場合は、`.env` の `ANALYSIS_AI_MODEL` に任意の OpenAI モデル名を設定します。
 
 ### 4. データベースを準備
 

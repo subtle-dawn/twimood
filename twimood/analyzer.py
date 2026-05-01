@@ -3,6 +3,7 @@ from pathlib import Path
 
 import httpx
 import openai
+from django.conf import settings
 from dotenv import load_dotenv
 
 from .definitions import ALL_LABELS
@@ -19,6 +20,7 @@ for env_path in ENV_PATHS:
         break
 
 api_key = os.getenv("OPENAI_API_KEY")
+analysis_ai_model = getattr(settings, "ANALYSIS_AI_MODEL", "gpt-3.5-turbo")
 
 # Some local shells set HTTP(S)_PROXY to a dead localhost port. OpenAI/httpx
 # honors proxy env vars by default, so ignore ambient proxy settings here.
@@ -52,7 +54,7 @@ def analyze_emotion_and_episode(text):
         raise AnalysisError("OPENAI_API_KEY が設定されていません。")
 
     prompt = f"""
-あなたは、ツイートの感情や行動（エピソード）を分類する専門家です。
+あなたは、ツイート投稿者の感情や行動（エピソード）を分類する専門家です。
 これは「ツイムード」というアプリで使用され、ツイートの中からユーザーの心理状態や日常行動を抽出することを目的としています。
 
 以下のリストに含まれる語句のうち、ツイートから明確に読み取れるものをすべて抽出してください。
@@ -71,7 +73,7 @@ def analyze_emotion_and_episode(text):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=analysis_ai_model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150,
             temperature=0.4,
