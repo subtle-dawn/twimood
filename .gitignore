@@ -1,5 +1,5 @@
 .env
 db.sqlite3
-tweets.js
+twimood/data/tweets.js
 __pycache__/
 *.pyc
